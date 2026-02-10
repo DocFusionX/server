@@ -20,11 +20,33 @@ class RAGService:
         return []
 
     def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
-        embedding = self.get_embedding(text)
-        if not embedding:
-            raise ValueError("Failed to generate embedding")
+        chunk_size = 4000
+        overlap = 200
 
-        self.collection.add(documents=[text], embeddings=[embedding], metadatas=[metadata or {}], ids=[str(uuid.uuid4())])
+        if len(text) <= chunk_size:
+            chunks = [text]
+        else:
+            chunks = []
+            start = 0
+            while start < len(text):
+                end = start + chunk_size
+                chunks.append(text[start:end])
+                start += chunk_size - overlap
+
+        for i, chunk in enumerate(chunks):
+            embedding = self.get_embedding(chunk)
+            if not embedding:
+                continue
+
+            chunk_metadata = (metadata or {}).copy()
+            chunk_metadata["chunk_index"] = i
+
+            self.collection.add(
+                documents=[chunk],
+                embeddings=[embedding],
+                metadatas=[chunk_metadata],
+                ids=[f"{str(uuid.uuid4())}_{i}"]
+            )
 
     def query(self, question: str, k: int = 3) -> str | None:
         question_embedding = self.get_embedding(question)
@@ -43,7 +65,11 @@ class RAGService:
             UserMessage(content=f"Context:\n{context}\n\nQuestion: {question}")
         ]
 
-        chat_response = self.client.chat.complete(model=settings.mistral_model, messages=messages, max_tokens=settings.mistral_max_tokens)
+        chat_response = self.client.chat.complete(
+            model=settings.mistral_model,
+            messages=messages,
+            max_tokens=settings.mistral_max_tokens
+        )
 
         if chat_response.choices:
             content = chat_response.choices[0].message.content

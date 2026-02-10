@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
 from app.services.rag_service import rag_service
+from app.services.pdf_service import pdf_service
 
 router = APIRouter()
 
@@ -19,6 +20,27 @@ async def ingest_document(request: IngestRequest):
     try:
         rag_service.ingest_text(request.text, request.metadata)
         return {"message": "Document ingested successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    filename = file.filename or "document.pdf"
+
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    try:
+        content = await file.read()
+        markdown_content = pdf_service.process_upload(content, filename)
+
+        rag_service.ingest_text(markdown_content, metadata={"filename": filename, "source": "upload"})
+
+        return {
+            "message": "File processed and ingested successfully",
+            "filename": filename,
+            "content_length": len(markdown_content)
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
