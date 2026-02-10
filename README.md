@@ -27,7 +27,7 @@ MISTRAL_MAX_TOKENS=64000
 uv venv
 ```
 ```bash
-soruce .venv/bin/activate
+source .venv/bin/activate
 ```
 
 #### 4. Install dependencies
