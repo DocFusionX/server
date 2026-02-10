@@ -17,6 +17,8 @@ cd server
 MISTRAL_API_KEY=
 CHROMA_DB_PATH=./chroma_db
 LOG_LEVEL=INFO
+MISTRAL_MODEL=mistral-small-latest
+MISTRAL_MAX_TOKENS=64000
 ```
 
 #### 3. Set up virtual environment
