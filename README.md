@@ -1,6 +1,6 @@
 ## DocFusionX Server
 
-### Installation
+### Installation & Dev
 
 #### 1. Clone the repo
 
@@ -19,10 +19,22 @@ CHROMA_DB_PATH=./chroma_db
 LOG_LEVEL=INFO
 ```
 
-#### 3. Install dependencies
+#### 3. Set up virtual environment
+
+```bash
+uv venv
+```
+
+#### 4. Install dependencies
 
 ```bash
 uv sync
+```
+
+#### 5. Start development server
+
+```bash
+uv run fastapi dev
 ```
 
 ### Running the Server
