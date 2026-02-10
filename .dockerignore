@@ -5,3 +5,4 @@ __pycache__
 .gitignore
 README.md
 docker-compose.yml
+chroma_db/
