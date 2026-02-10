@@ -24,6 +24,9 @@ LOG_LEVEL=INFO
 ```bash
 uv venv
 ```
+```bash
+soruce .venv/bin/activate
+```
 
 #### 4. Install dependencies
 
