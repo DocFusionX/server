@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
-from app.services.rag_service import rag_service
+from app.services.rag import rag_service
 from app.services.pdf_service import pdf_service
 
 router = APIRouter()
