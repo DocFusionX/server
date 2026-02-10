@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     mistral_model: str = "mistral-small-latest"
     mistral_max_tokens: int = 64000
     chroma_db_path: str = "./chroma_db"
+    upload_dir: str = "./data/uploads"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

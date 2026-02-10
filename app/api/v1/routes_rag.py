@@ -44,6 +44,29 @@ async def upload_pdf(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/files")
+async def list_files():
+    try:
+        files = pdf_service.list_files()
+        return {"files": files}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/files/{filename}")
+async def delete_file(filename: str):
+    try:
+        deleted = pdf_service.delete_file(filename)
+        if not deleted:
+            raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
+
+        rag_service.delete_document(filename)
+
+        return {"message": f"File '{filename}' deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/query")
 async def query_rag(request: QueryRequest):
     try:
