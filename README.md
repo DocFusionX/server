@@ -5,8 +5,8 @@
 #### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/DocFusionX.git
-cd DocFusionX/server
+git clone https://github.com/DocFusionX/server.git
+cd server
 ```
 
 #### 2. Setup env variables
