@@ -12,10 +12,7 @@ class RAGService:
         self.collection = self.chroma_client.get_or_create_collection(name="documents")
 
     def get_embedding(self, text: str) -> List[float]:
-        response = self.client.embeddings.create(
-            model="mistral-embed",
-            inputs=[text]
-        )
+        response = self.client.embeddings.create(model="mistral-embed", inputs=[text])
         if response.data:
             embedding = response.data[0].embedding
             if isinstance(embedding, list):
@@ -27,22 +24,14 @@ class RAGService:
         if not embedding:
             raise ValueError("Failed to generate embedding")
 
-        self.collection.add(
-            documents=[text],
-            embeddings=[embedding],
-            metadatas=[metadata or {}],
-            ids=[str(uuid.uuid4())]
-        )
+        self.collection.add(documents=[text], embeddings=[embedding], metadatas=[metadata or {}], ids=[str(uuid.uuid4())])
 
     def query(self, question: str, k: int = 3) -> str | None:
         question_embedding = self.get_embedding(question)
         if not question_embedding:
             return "Error: Failed to generate embedding for the question."
 
-        results = self.collection.query(
-            query_embeddings=[question_embedding],
-            n_results=k
-        )
+        results = self.collection.query(query_embeddings=[question_embedding], n_results=k)
 
         if not results or not results['documents'] or not results['documents'][0]:
             return "No relevant context found."
@@ -54,10 +43,7 @@ class RAGService:
             UserMessage(content=f"Context:\n{context}\n\nQuestion: {question}")
         ]
 
-        chat_response = self.client.chat.complete(
-            model="mistral-tiny",
-            messages=messages
-        )
+        chat_response = self.client.chat.complete(model=settings.mistral_model, messages=messages, max_tokens=settings.mistral_max_tokens)
 
         if chat_response.choices:
             content = chat_response.choices[0].message.content
