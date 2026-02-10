@@ -6,3 +6,4 @@ __pycache__
 README.md
 docker-compose.yml
 chroma_db/
+data/
