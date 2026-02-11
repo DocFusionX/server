@@ -56,3 +56,10 @@ class VectorStore:
 
     def delete(self, filename: str) -> None:
         self.collection.delete(where={"filename": filename})
+
+    def clear(self) -> None:
+        self.client.delete_collection(self.collection_name)
+        self.collection = self.client.get_or_create_collection(name=self.collection_name)
+        self.documents = []
+        self.tokenized_documents = []
+        self.bm25 = None

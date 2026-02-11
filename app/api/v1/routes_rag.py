@@ -77,3 +77,12 @@ async def query_rag(request: QueryRequest):
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/clear")
+async def clear_database():
+    try:
+        rag_service.clear_database()
+        pdf_service.clear_files()
+        return {"message": "Database and files cleared successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

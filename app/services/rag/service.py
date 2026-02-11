@@ -98,4 +98,7 @@ class RAGService:
     def delete_document(self, filename: str) -> None:
         self.vector_store.delete(filename=filename)
 
+    def clear_database(self) -> None:
+        self.vector_store.clear()
+
 rag_service = RAGService()
