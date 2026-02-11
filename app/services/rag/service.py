@@ -31,7 +31,7 @@ class RAGService:
 
             embeddings = self.embedding_model.encode(
                 chunks,
-                batch_size=128,
+                batch_size=64,
                 show_progress_bar=True,
                 convert_to_numpy=True
             )
