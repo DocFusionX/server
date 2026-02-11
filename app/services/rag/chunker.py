@@ -30,9 +30,19 @@ def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tup
     body_chunks = text_splitter.split_text(text)
 
     chunk_offset = len(chunks_with_meta)
+    filename = (metadata or {}).get("filename", "unknown")
+
     for i, chunk in enumerate(body_chunks):
         base_meta = (metadata or {}).copy()
-        base_meta["chunk_index"] = chunk_offset + i
+        current_idx = chunk_offset + i
+        base_meta["chunk_index"] = current_idx
+        base_meta["chunk_id"] = f"{filename}_{current_idx}"
+
+        if i < len(body_chunks) - 1:
+            base_meta["next_chunk_id"] = f"{filename}_{current_idx + 1}"
+        if i > 0:
+            base_meta["prev_chunk_id"] = f"{filename}_{current_idx - 1}"
+
         chunks_with_meta.append((chunk, base_meta))
 
     return chunks_with_meta

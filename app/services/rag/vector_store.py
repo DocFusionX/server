@@ -1,12 +1,15 @@
 import uuid
-from typing import Sequence, List, Optional
+from typing import Sequence, List, Optional, Any
 
 import chromadb
 from chromadb.api.types import Embedding, Metadata
 from rank_bm25 import BM25Okapi
+from langchain_chroma import Chroma
 
 class VectorStore:
     def __init__(self, path: str, collection_name: str = "documents"):
+        self.path = path
+        self.collection_name = collection_name
         self.client = chromadb.PersistentClient(path=path)
         self.collection = self.client.get_or_create_collection(name=collection_name)
         self.documents: List[str] = self.collection.get().get("documents") or []
@@ -14,6 +17,13 @@ class VectorStore:
         self.bm25: Optional[BM25Okapi] = None
         if self.tokenized_documents:
             self.bm25 = BM25Okapi(self.tokenized_documents)
+
+    def get_langchain_store(self, embedding_function: Any) -> Chroma:
+        return Chroma(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding_function=embedding_function
+        )
 
     def add(self, documents: Sequence[str], embeddings: Sequence[Embedding], metadatas: Sequence[Metadata]) -> None:
         ids = [f"{uuid.uuid4()}_{i}" for i in range(len(documents))]
