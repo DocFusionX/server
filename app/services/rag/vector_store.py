@@ -18,9 +18,11 @@ class VectorStore:
     def add(self, documents: Sequence[str], embeddings: Sequence[Embedding], metadatas: Sequence[Metadata]) -> None:
         ids = [f"{uuid.uuid4()}_{i}" for i in range(len(documents))]
         self.collection.add(documents=list(documents), embeddings=list(embeddings), metadatas=list(metadatas), ids=ids)
-        self.documents.extend(documents)
-        self.tokenized_documents.extend([doc.split(" ") for doc in documents])
-        self.bm25 = BM25Okapi(self.tokenized_documents)
+
+        self.documents: List[str] = self.collection.get().get("documents") or []
+        self.tokenized_documents = [doc.split(" ") for doc in self.documents]
+        if self.tokenized_documents:
+            self.bm25 = BM25Okapi(self.tokenized_documents)
 
     def vector_query(self, query_embedding: Embedding, k: int) -> List[str]:
         results = self.collection.query(query_embeddings=[query_embedding], n_results=k)
