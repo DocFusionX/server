@@ -9,13 +9,11 @@ def extract_structure(text: str) -> str:
     return "Document Structure and Table of Contents:\n" + "\n".join(headers)
 
 def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tuple[str, Dict[str, Any]]]:
-    chunks_with_meta = []
-
     structure_summary = extract_structure(text)
+
+    combined_text = text
     if structure_summary:
-        meta = (metadata or {}).copy()
-        meta["is_structure"] = True
-        chunks_with_meta.append((structure_summary, meta))
+        combined_text = structure_summary + "\n\n---\n\n" + text
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
@@ -24,8 +22,9 @@ def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tup
         is_separator_regex=False,
     )
 
-    chunks = text_splitter.split_text(text)
+    chunks = text_splitter.split_text(combined_text)
 
+    chunks_with_meta = []
     for i, chunk in enumerate(chunks):
         base_meta = (metadata or {}).copy()
         base_meta["chunk_index"] = i
