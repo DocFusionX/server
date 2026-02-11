@@ -24,27 +24,20 @@ class RAGService:
             chunks_with_meta = chunk_text(text, metadata)
 
             chunks = [item[0] for item in chunks_with_meta]
-
             metadatas = [item[1] for item in chunks_with_meta]
 
-            valid_embeddings = []
-            valid_chunks = []
-            valid_metadatas = []
-
-            for chunk, meta in zip(chunks, metadatas):
-                try:
-                    embedding = self.get_embedding(chunk)
-                    valid_embeddings.append(embedding)
-                    valid_chunks.append(chunk)
-                    valid_metadatas.append(meta)
-
-                except (ValueError, TypeError):
-                    continue
-
-            if not valid_embeddings:
+            if not chunks:
                 return
 
-            self.vector_store.add(documents=valid_chunks, embeddings=valid_embeddings, metadatas=valid_metadatas)
+            embeddings = self.embedding_model.encode(
+                chunks,
+                batch_size=128,
+                show_progress_bar=True,
+                convert_to_numpy=True
+            )
+
+            embeddings_list = [emb for emb in embeddings]
+            self.vector_store.add(documents=chunks, embeddings=embeddings_list, metadatas=metadatas)
 
     def query(self, question: str, k: int = 10) -> str | None:
             hypothetical_answer = self.llm_service.generate_hypothetical_answer(question)
