@@ -5,7 +5,7 @@ HYDE_PROMPT = (
 
 MAP_PROMPT = (
     "You are an expert Q&A system. Your task is to answer the following question based *only* on the provided context.\n"
-    "If the context does not contain the answer, state that the answer is not available in the provided context.\n"
+    "If the context does not contain the information needed to answer the question, respond with an empty string.\n"
     "Question: {question}\n\n"
     "Context:\n{context}"
 )

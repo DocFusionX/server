@@ -38,8 +38,10 @@ class LLMService:
             if answer:
                 individual_answers.append(answer)
 
+        individual_answers = [ans for ans in individual_answers if ans.strip()]
+
         if not individual_answers:
-            return "Could not generate any answers from the provided documents."
+            return "Could not generate any answers from the provided documents. Try a different query."
 
         answers_str = "\n---\n".join(individual_answers)
         reduce_prompt_formatted = REDUCE_PROMPT.format(question=question, answers=answers_str)

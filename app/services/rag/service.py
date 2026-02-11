@@ -6,6 +6,7 @@ from app.services.rag.vector_store import VectorStore
 from app.services.rag.llm import LLMService
 from app.services.rag.chunker import chunk_text
 from chromadb.api.types import Embedding
+from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
 
 class RAGService:
@@ -13,19 +14,11 @@ class RAGService:
         self.mistral_client = Mistral(api_key=settings.mistral_api_key)
         self.vector_store = VectorStore(path=settings.chroma_db_path)
         self.llm_service = LLMService(client=self.mistral_client, model=settings.mistral_model, max_tokens=settings.mistral_max_tokens)
-        self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L6-v2')
+        self.embedding_model = SentenceTransformer('BAAI/bge-m3')
+        self.cross_encoder = CrossEncoder('BAAI/bge-reranker-large')
 
     def get_embedding(self, text: str) -> Embedding:
-        response = self.mistral_client.embeddings.create(model="mistral-embed", inputs=[text])
-
-        if not response.data:
-            raise ValueError("No embedding returned")
-
-        embedding = response.data[0].embedding
-        if not isinstance(embedding, list):
-            raise TypeError("Embedding must be a list of floats")
-
-        return np.array(embedding)
+        return self.embedding_model.encode(text, convert_to_numpy=True)
 
     def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
             chunks_with_meta = chunk_text(text, metadata)
