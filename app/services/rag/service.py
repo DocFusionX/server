@@ -6,12 +6,14 @@ from app.services.rag.vector_store import VectorStore
 from app.services.rag.llm import LLMService
 from app.services.rag.chunker import chunk_text
 from chromadb.api.types import Embedding
+from sentence_transformers.cross_encoder import CrossEncoder
 
 class RAGService:
     def __init__(self):
         self.mistral_client = Mistral(api_key=settings.mistral_api_key)
         self.vector_store = VectorStore(path=settings.chroma_db_path)
         self.llm_service = LLMService(client=self.mistral_client, model=settings.mistral_model, max_tokens=settings.mistral_max_tokens)
+        self.cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L6-v2')
 
     def get_embedding(self, text: str) -> Embedding:
         response = self.mistral_client.embeddings.create(model="mistral-embed", inputs=[text])
@@ -52,26 +54,26 @@ class RAGService:
             self.vector_store.add(documents=valid_chunks, embeddings=valid_embeddings, metadatas=valid_metadatas)
 
     def query(self, question: str, k: int = 10) -> str | None:
+            hypothetical_answer = self.llm_service.generate_hypothetical_answer(question)
+            if not hypothetical_answer:
+                hypothetical_answer = question
+
             try:
-                question_embedding = self.get_embedding(question)
+                hyde_embedding = self.get_embedding(hypothetical_answer)
 
             except (ValueError, TypeError):
-                return "Error: Failed to generate embedding for the question."
+                return "Error: Failed to generate embedding for the hypothetical answer."
 
-            retrieved_chunks = self.vector_store.query(question_embedding, k=k)
+            retrieved_chunks = self.vector_store.hybrid_query(question=question, query_embedding=hyde_embedding, k=k*2)
 
             if not retrieved_chunks:
                 return "No relevant context found."
 
-            refined_answer = self.llm_service.get_initial_answer(question, retrieved_chunks[0])
-            if refined_answer is None:
-                return "Could not generate an initial answer."
+            scores = self.cross_encoder.predict([(question, doc) for doc in retrieved_chunks])
+            ranked_chunks = [doc for _, doc in sorted(zip(scores, retrieved_chunks), reverse=True)]
+            reranked_chunks = ranked_chunks[:k]
 
-            for i in range(1, len(retrieved_chunks)):
-                refined_answer = self.llm_service.get_refined_answer(question=question, existing_answer=refined_answer, new_context=retrieved_chunks[i])
-                if refined_answer is None:
-                    return f"Failed to refine the answer at step {i}"
-            return refined_answer
+            return self.llm_service.generate_answer_map_reduce(question, reranked_chunks)
 
     def delete_document(self, filename: str) -> None:
         self.vector_store.delete(filename=filename)

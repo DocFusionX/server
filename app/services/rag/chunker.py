@@ -1,5 +1,6 @@
 import re
 from typing import List, Tuple, Dict, Any, Optional
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def extract_structure(text: str) -> str:
     headers = re.findall(r'^(#{1,6}\s+.+)', text, re.MULTILINE)
@@ -16,32 +17,18 @@ def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tup
         meta["is_structure"] = True
         chunks_with_meta.append((structure_summary, meta))
 
-    semantic_chunks = re.split(r'^(?=#{1,6}\s)', text, flags=re.MULTILINE)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+        is_separator_regex=False,
+    )
 
-    max_chunk_size = 2000
-    overlap = 200
+    chunks = text_splitter.split_text(text)
 
-    for i, semantic_chunk in enumerate(semantic_chunks):
-        semantic_chunk = semantic_chunk.strip()
-        if not semantic_chunk:
-            continue
-
-        header_match = re.match(r'^(#{1,6}\s+.+)', semantic_chunk)
-        header = header_match.group(1).strip() if header_match else None
-
+    for i, chunk in enumerate(chunks):
         base_meta = (metadata or {}).copy()
-        if header:
-            base_meta["header"] = header
         base_meta["chunk_index"] = i
-
-        if len(semantic_chunk) > max_chunk_size:
-            start = 0
-            while start < len(semantic_chunk):
-                end = start + max_chunk_size
-                chunk_part = semantic_chunk[start:end]
-                chunks_with_meta.append((chunk_part, base_meta.copy()))
-                start += max_chunk_size - overlap
-        else:
-            chunks_with_meta.append((semantic_chunk, base_meta.copy()))
+        chunks_with_meta.append((chunk, base_meta))
 
     return chunks_with_meta
