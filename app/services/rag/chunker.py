@@ -9,25 +9,30 @@ def extract_structure(text: str) -> str:
     return "Document Structure and Table of Contents:\n" + "\n".join(headers)
 
 def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tuple[str, Dict[str, Any]]]:
-    structure_summary = extract_structure(text)
-
-    combined_text = text
-    if structure_summary:
-        combined_text = structure_summary + "\n\n---\n\n" + text
+    chunks_with_meta = []
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=1400,
+        chunk_overlap=400,
         length_function=len,
         is_separator_regex=False,
     )
 
-    chunks = text_splitter.split_text(combined_text)
+    structure_summary = extract_structure(text)
+    if structure_summary:
+        structure_chunks = text_splitter.split_text(structure_summary)
+        for i, chunk in enumerate(structure_chunks):
+            meta = (metadata or {}).copy()
+            meta["is_structure"] = True
+            meta["chunk_index"] = i
+            chunks_with_meta.append((chunk, meta))
 
-    chunks_with_meta = []
-    for i, chunk in enumerate(chunks):
+    body_chunks = text_splitter.split_text(text)
+
+    chunk_offset = len(chunks_with_meta)
+    for i, chunk in enumerate(body_chunks):
         base_meta = (metadata or {}).copy()
-        base_meta["chunk_index"] = i
+        base_meta["chunk_index"] = chunk_offset + i
         chunks_with_meta.append((chunk, base_meta))
 
     return chunks_with_meta
