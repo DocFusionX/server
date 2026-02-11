@@ -62,7 +62,7 @@ class RAGService:
             embeddings_list = [emb for emb in embeddings]
             self.vector_store.add(documents=chunks, embeddings=embeddings_list, metadatas=metadatas)
 
-    def query(self, question: str, k: int = 10) -> str | None:
+    def query(self, question: str, k: int = 5) -> str | None:
             hypothetical_answer = self.llm_service.generate_hypothetical_answer(question)
             if not hypothetical_answer:
                 hypothetical_answer = question
@@ -77,23 +77,48 @@ class RAGService:
 
             try:
                 retrieved_docs = retriever.invoke(hypothetical_answer)
-                retrieved_chunks = [doc.page_content for doc in retrieved_docs]
+
+                if not retrieved_docs:
+                    return "No relevant context found."
+
+                doc_texts = [doc.page_content for doc in retrieved_docs]
+                scores = self.cross_encoder.predict([(question, text) for text in doc_texts])
+
+                scored_docs = sorted(zip(scores, retrieved_docs), key=lambda x: x[0], reverse=True)
+                reranked_docs = [doc for score, doc in scored_docs[:k]]
+
+                formatted_contexts = []
+                seen_structures = set()
+                global_structure_context = ""
+
+                for doc in reranked_docs:
+                    filename = doc.metadata.get("filename", "Unknown Source")
+
+                    structure = doc.metadata.get("document_structure")
+
+                    if doc.metadata.get("is_structure") and not structure:
+                         structure = doc.page_content
+
+                    if structure and filename not in seen_structures:
+                        global_structure_context += f"Document Structure for {filename}:\n{structure}\n\n"
+                        seen_structures.add(filename)
+
+                    if doc.metadata.get("is_structure"):
+                        header = "[DOCUMENT STRUCTURE / TABLE OF CONTENTS]"
+                    else:
+                        idx = doc.metadata.get("chunk_index", "N/A")
+                        header = f"[Source: {filename}, Segment: {idx}]"
+
+                    formatted_contexts.append(f"{header}\n{doc.page_content}")
+
+                if global_structure_context:
+                    formatted_contexts.insert(0, f"--- GLOBAL CONTEXT ---\n{global_structure_context}--- END GLOBAL CONTEXT ---")
+
+                return self.llm_service.generate_answer(question, formatted_contexts)
+
             except Exception as e:
-                print(f"Graph retrieval failed: {e}. Falling back to hybrid query.")
-                try:
-                    hyde_embedding = self.get_embedding(hypothetical_answer)
-                    retrieved_chunks = self.vector_store.hybrid_query(question=question, query_embedding=hyde_embedding, k=k*2)
-                except Exception:
-                    return "Error during retrieval."
-
-            if not retrieved_chunks:
-                return "No relevant context found."
-
-            scores = self.cross_encoder.predict([(question, doc) for doc in retrieved_chunks])
-            ranked_chunks = [doc for _, doc in sorted(zip(scores, retrieved_chunks), reverse=True)]
-            reranked_chunks = ranked_chunks[:k]
-
-            return self.llm_service.generate_answer_map_reduce(question, reranked_chunks)
+                print(f"Retrieval or generation failed: {e}")
+                return "Error during retrieval or answer generation."
 
     def delete_document(self, filename: str) -> None:
         self.vector_store.delete(filename=filename)

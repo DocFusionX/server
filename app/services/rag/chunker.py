@@ -10,6 +10,7 @@ def extract_structure(text: str) -> str:
 
 def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tuple[str, Dict[str, Any]]]:
     chunks_with_meta = []
+    filename = (metadata or {}).get("filename", "unknown")
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1400,
@@ -19,24 +20,28 @@ def chunk_text(text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Tup
     )
 
     structure_summary = extract_structure(text)
+
     if structure_summary:
         structure_chunks = text_splitter.split_text(structure_summary)
         for i, chunk in enumerate(structure_chunks):
             meta = (metadata or {}).copy()
             meta["is_structure"] = True
             meta["chunk_index"] = i
+            meta["chunk_id"] = f"{filename}_structure_{i}"
             chunks_with_meta.append((chunk, meta))
 
     body_chunks = text_splitter.split_text(text)
 
     chunk_offset = len(chunks_with_meta)
-    filename = (metadata or {}).get("filename", "unknown")
 
     for i, chunk in enumerate(body_chunks):
         base_meta = (metadata or {}).copy()
         current_idx = chunk_offset + i
         base_meta["chunk_index"] = current_idx
         base_meta["chunk_id"] = f"{filename}_{current_idx}"
+
+        if structure_summary:
+            base_meta["document_structure"] = structure_summary
 
         if i < len(body_chunks) - 1:
             base_meta["next_chunk_id"] = f"{filename}_{current_idx + 1}"

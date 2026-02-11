@@ -17,3 +17,13 @@ REDUCE_PROMPT = (
     "{answers}\n\n"
     "Please synthesize these into a single, coherent, and comprehensive answer."
 )
+
+STUFF_PROMPT = (
+    "You are an expert Q&A system. Your task is to answer the question based *only* on the provided context below.\n"
+    "The context consists of document segments and may include structural information (Table of Contents or Headers).\n"
+    "Pay attention to the document structure to understand the context and hierarchy of the information.\n"
+    "If the context does not contain the information needed to answer the question, state that you do not know.\n\n"
+    "Context:\n"
+    "{context}\n\n"
+    "Question: {question}"
+)

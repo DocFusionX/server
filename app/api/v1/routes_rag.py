@@ -13,7 +13,7 @@ class IngestRequest(BaseModel):
 
 class QueryRequest(BaseModel):
     question: str
-    k: int = 10
+    k: int = 5
 
 @router.post("/ingest")
 async def ingest_document(request: IngestRequest):

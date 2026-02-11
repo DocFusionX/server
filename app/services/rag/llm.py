@@ -1,7 +1,7 @@
 from typing import List
 from mistralai import Mistral, Messages, MessagesTypedDict
 from mistralai.models import UserMessage, SystemMessage
-from app.services.rag.prompts import MAP_PROMPT, REDUCE_PROMPT, HYDE_PROMPT
+from app.services.rag.prompts import MAP_PROMPT, REDUCE_PROMPT, HYDE_PROMPT, STUFF_PROMPT
 
 class LLMService:
     def __init__(self, client: Mistral, model: str, max_tokens: int):
@@ -23,6 +23,16 @@ class LLMService:
         messages = [
             SystemMessage(content=HYDE_PROMPT),
             UserMessage(content=question)
+        ]
+        return self._call_llm(messages)
+
+    def generate_answer(self, question: str, contexts: List[str]) -> str | None:
+        combined_context = "\n\n---\n\n".join(contexts)
+        prompt = STUFF_PROMPT.format(question=question, context=combined_context)
+
+        messages = [
+            SystemMessage(content="You are an expert Q&A system."),
+            UserMessage(content=prompt)
         ]
         return self._call_llm(messages)
 
