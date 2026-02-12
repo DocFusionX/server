@@ -36,8 +36,8 @@ class RAGService:
     def get_embedding(self, text: str) -> Embedding:
         return self.embedding_model.encode(text, convert_to_numpy=True)
 
-    def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
-        filename = (metadata or {}).get("filename", "Unknown")
+    def _check_document_integrity(self, text: str, metadata: Dict[str, Any]):
+        filename = metadata.get("filename", "Unknown")
         issues = validator.validate(text)
 
         if issues:
@@ -47,6 +47,9 @@ class RAGService:
             print("-------------------------------------------------")
         else:
             print(f"--- Document Integrity Check Passed for {filename} ---")
+
+    def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
+        self._check_document_integrity(text, metadata or {})
 
         chunks_with_meta = chunk_text(text, metadata)
         if not chunks_with_meta:
@@ -99,6 +102,29 @@ class RAGService:
                             ))
 
         return neighbors
+
+    def _validate_and_correct_answer(self, initial_answer: str) -> str:
+        issues = validator.validate(initial_answer)
+
+        if not issues:
+            return initial_answer
+
+        print(f"Detected {len(issues)} structural issues in LLM response. Attempting self-correction...")
+
+        error_report = "The previous answer had the following structural errors:\n"
+        for issue in issues:
+            error_report += f"- [{issue.issue_type.upper()}] {issue.message}\n"
+
+        correction_prompt = (
+            f"{initial_answer}\n\n"
+            f"--- CRITICAL FEEDBACK ---\n"
+            f"{error_report}\n"
+            f"Please rewrite the answer to fix these numbering and structural issues. "
+            f"Ensure no sections are missing and the hierarchy is correct."
+        )
+
+        corrected_answer = self.llm_service.generate_answer(correction_prompt, [])
+        return corrected_answer or initial_answer
 
     def query(self, question: str, k: int = 5) -> str | None:
         try:
@@ -154,7 +180,11 @@ class RAGService:
             if global_structure_context:
                 formatted_contexts.insert(0, f"--- GLOBAL CONTEXT ---\n{global_structure_context}--- END GLOBAL CONTEXT ---")
 
-            return self.llm_service.generate_answer(question, formatted_contexts)
+            initial_answer = self.llm_service.generate_answer(question, formatted_contexts)
+            if not initial_answer:
+                return "Failed to generate an answer."
+
+            return self._validate_and_correct_answer(initial_answer)
 
         except Exception as e:
             print(f"RAG Error: {e}")

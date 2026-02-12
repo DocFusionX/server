@@ -66,33 +66,42 @@ class StructureValidator:
                 return name
         return None
 
-    def validate(self, markdown_text: str) -> List[ValidationIssue]:
-        issues = []
-        lines = markdown_text.split('\n')
+    def _parse_line(self, line: str) -> Optional[Tuple[int, str]]:
+        # A. Markdown Headers
+        match_header = re.match(r'^(#{1,6})\s+(.+)$', line)
+        if match_header:
+            level = len(match_header.group(1))
+            content = match_header.group(2).strip()
+            return level, content
 
+        # B. List Items (e.g., "1. Text", "  a. Text")
+        match_list = re.match(r'^(\s*)((?:\d+\.)+|[a-zA-Z]\.|[IVXLCDM]+\.)\s+(.+)$', line)
+        if match_list:
+            indent = match_list.group(1)
+            marker = match_list.group(2)
+            content = match_list.group(3).strip()
+
+            # Determine level
+            if '.' in marker[:-1] and marker[0].isdigit():
+                level = marker.count('.')
+            else:
+                level = (len(indent) // 2) + 1
+
+            level = min(level, 6)
+            return level, f"{marker} {content}"
+
+        return None
+
+    def _analyze_structure(self, headers: List[Tuple[int, str]]) -> List[ValidationIssue]:
+        issues = []
         last_numbers: Dict[int, int] = {}
         level_patterns: Dict[int, str] = {}
-
-        min_level = 6
-        headers = []
-
-        for line in lines:
-            match = re.match(r'^(#{1,6})\s+(.+)$', line)
-            if match:
-                level = len(match.group(1))
-                text = match.group(2).strip()
-                min_level = min(min_level, level)
-                headers.append((level, text))
-
         prev_level = 0
+
         for level, text in headers:
+            # Hierarchy Check
             if level > prev_level + 1 and prev_level != 0:
-                 issues.append(ValidationIssue(
-                     level=level,
-                     header=text,
-                     issue_type="hierarchy",
-                     message=f"Skipped header level: Jumped from H{prev_level} to H{level}."
-                 ))
+                 pass
 
             prev_level = level
             pattern = self._detect_pattern(text)
@@ -114,7 +123,7 @@ class StructureValidator:
                             level=level,
                             header=text,
                             issue_type="gap",
-                            message=f"Missing section? Expected {expected}, found {num}."
+                            message=f"Missing item? Expected {expected}, found {num}."
                         ))
 
                     last_numbers[level] = num
@@ -125,5 +134,16 @@ class StructureValidator:
                 pass
 
         return issues
+
+    def validate(self, text: str) -> List[ValidationIssue]:
+        headers = []
+        lines = text.split('\n')
+
+        for line in lines:
+            parsed = self._parse_line(line)
+            if parsed:
+                headers.append(parsed)
+
+        return self._analyze_structure(headers)
 
 validator = StructureValidator()
