@@ -1015,21 +1015,6 @@ wheels = [
 ]
 
 [[package]]
-name = "graph-retriever"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "immutabledict" },
-    { name = "numpy" },
-    { name = "pytest" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/d2/7821dfc262c3cecfad3e61eb16d425189eac68a780e2386fd50b04b24f53/graph_retriever-0.8.0.tar.gz", hash = "sha256:e61f1cb27184e8d4559ece6de0a6ea18920908ffbae945051f9a01380af73347", size = 35728, upload-time = "2025-04-04T12:55:56.638Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/ff/89506882321b0f1e2c720aff109ec46c7c74ef1e4aafbb62298fb8a387a0/graph_retriever-0.8.0-py3-none-any.whl", hash = "sha256:030bfd1976fd4eda358e3296670dc9a6c2209fcca5ad6c0281534a73d5346d01", size = 37141, upload-time = "2025-04-04T12:55:55.675Z" },
-]
-
-[[package]]
 name = "greenlet"
 version = "3.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1267,15 +1252,6 @@ wheels = [
 ]
 
 [[package]]
-name = "immutabledict"
-version = "4.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/31/d5/99764e9a1fa555d0c0be0ea03ed42f32a6948ee00fd135b436e7ea35153c/immutabledict-4.3.0.tar.gz", hash = "sha256:9a6ea13c6baacebdcecb3aed3f1fb571bc3d600777d87518f1d176cc8b207e9c", size = 6863, upload-time = "2026-02-10T18:15:01.808Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/17/6c49e68e6b1824ba03483fd1adcdebad7f8a261bb332ae8d4f0aae9d448a/immutabledict-4.3.0-py3-none-any.whl", hash = "sha256:998d43d1dbc3a0e733ce4135c1c948aa7866c256761d3fa63d8627366502ca00", size = 4923, upload-time = "2026-02-10T18:15:00.378Z" },
-]
-
-[[package]]
 name = "importlib-metadata"
 version = "8.7.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1294,15 +1270,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693, upload-time = "2025-01-03T18:51:56.698Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461, upload-time = "2025-01-03T18:51:54.306Z" },
-]
-
-[[package]]
-name = "iniconfig"
-version = "2.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
 ]
 
 [[package]]
@@ -1510,24 +1477,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/12/17/1943cedfc118e04b8128e4c3e1dbf0fa0ea58eefddbb6198cfd699d19f01/langchain_core-1.2.11.tar.gz", hash = "sha256:f164bb36602dd74a3a50c1334fca75309ad5ed95767acdfdbb9fa95ce28a1e01", size = 831211, upload-time = "2026-02-10T20:35:28.35Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/10/30/1f80e3fc674353cad975ed5294353d42512535d2094ef032c06454c2c873/langchain_core-1.2.11-py3-none-any.whl", hash = "sha256:ae11ceb8dda60d0b9d09e763116e592f1683327c17be5b715f350fd29aee65d3", size = 500062, upload-time = "2026-02-10T20:35:26.698Z" },
-]
-
-[[package]]
-name = "langchain-graph-retriever"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "backoff" },
-    { name = "graph-retriever" },
-    { name = "immutabledict" },
-    { name = "langchain-core" },
-    { name = "networkx" },
-    { name = "pydantic" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b5/a3/97c2096e1554f721e1dd62d4867cc4104184e1926684e7961a4373365d48/langchain_graph_retriever-0.8.0.tar.gz", hash = "sha256:cd39b551bc3caf1c4bb83c380eb1d7df4de58a9cb56f700e3cd2b577b280be00", size = 33042, upload-time = "2025-04-04T12:55:59.028Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/b9/347f2bb6d50f7733c7b78b84ce872c3cc4b64bbfa479bc7f367a80b48957/langchain_graph_retriever-0.8.0-py3-none-any.whl", hash = "sha256:c359f03e8f8af33e15f24137b4f7a165add613b7eba4eb8cda9878891381fd71", size = 33848, upload-time = "2025-04-04T12:55:57.724Z" },
 ]
 
 [[package]]
@@ -3490,22 +3439,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest"
-version = "9.0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "iniconfig" },
-    { name = "packaging" },
-    { name = "pluggy" },
-    { name = "pygments" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/db/7ef3487e0fb0049ddb5ce41d3a49c235bf9ad299b6a25d5780a89f19230f/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11", size = 1568901, upload-time = "2025-12-06T21:30:51.014Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b", size = 374801, upload-time = "2025-12-06T21:30:49.154Z" },
-]
-
-[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -4286,11 +4219,9 @@ dependencies = [
     { name = "chromadb" },
     { name = "docling" },
     { name = "fastapi", extra = ["standard"] },
-    { name = "graph-retriever" },
     { name = "langchain" },
     { name = "langchain-chroma" },
     { name = "langchain-community" },
-    { name = "langchain-graph-retriever" },
     { name = "langchain-text-splitters" },
     { name = "mistralai" },
     { name = "pydantic-settings" },
@@ -4306,11 +4237,9 @@ requires-dist = [
     { name = "chromadb", specifier = ">=1.5.0" },
     { name = "docling", specifier = ">=2.72.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.5" },
-    { name = "graph-retriever", specifier = ">=0.8.0" },
     { name = "langchain", specifier = ">=1.2.10" },
     { name = "langchain-chroma", specifier = ">=1.1.0" },
     { name = "langchain-community", specifier = ">=0.4.1" },
-    { name = "langchain-graph-retriever", specifier = ">=0.8.0" },
     { name = "langchain-text-splitters", specifier = ">=1.1.0" },
     { name = "mistralai", specifier = ">=1.12.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
