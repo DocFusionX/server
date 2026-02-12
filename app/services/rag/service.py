@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.services.rag.vector_store import VectorStore
 from app.services.rag.llm import LLMService
 from app.services.rag.chunker import chunk_text
+from app.services.rag.integrity import validator
 from chromadb.api.types import Embedding
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
@@ -36,6 +37,17 @@ class RAGService:
         return self.embedding_model.encode(text, convert_to_numpy=True)
 
     def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
+        filename = (metadata or {}).get("filename", "Unknown")
+        issues = validator.validate(text)
+
+        if issues:
+            print(f"--- Document Integrity Report for {filename} ---")
+            for issue in issues:
+                print(f"[{issue.issue_type.upper()}] L{issue.level} '{issue.header}': {issue.message}")
+            print("-------------------------------------------------")
+        else:
+            print(f"--- Document Integrity Check Passed for {filename} ---")
+
         chunks_with_meta = chunk_text(text, metadata)
         if not chunks_with_meta:
             return
