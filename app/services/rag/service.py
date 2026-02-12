@@ -8,10 +8,8 @@ from app.services.rag.chunker import chunk_text
 from chromadb.api.types import Embedding
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
-from langchain_graph_retriever import GraphRetriever
-from graph_retriever.strategies import Eager
-from graph_retriever.edges import EdgeSpec
 from langchain_core.embeddings import Embeddings
+from langchain_core.documents import Document
 
 class TransformerEmbeddings(Embeddings):
     def __init__(self, model: SentenceTransformer):
@@ -34,91 +32,121 @@ class RAGService:
         self.lc_embeddings = TransformerEmbeddings(self.embedding_model)
         self.cross_encoder = CrossEncoder('BAAI/bge-reranker-large')
 
-        self.edges: List[EdgeSpec] = [
-            ("next_chunk_id", "chunk_id"),
-            ("prev_chunk_id", "chunk_id"),
-            ("filename", "filename"),
-        ]
-
     def get_embedding(self, text: str) -> Embedding:
         return self.embedding_model.encode(text, convert_to_numpy=True)
 
     def ingest_text(self, text: str, metadata: Optional[Dict[str, Any]] = None):
-            chunks_with_meta = chunk_text(text, metadata)
+        chunks_with_meta = chunk_text(text, metadata)
+        if not chunks_with_meta:
+            return
 
-            chunks = [item[0] for item in chunks_with_meta]
-            metadatas = [item[1] for item in chunks_with_meta]
+        chunks = [item[0] for item in chunks_with_meta]
+        metadatas = [item[1] for item in chunks_with_meta]
+        embeddings = self.embedding_model.encode(
+            chunks,
+            batch_size=64,
+            show_progress_bar=True,
+            convert_to_numpy=True
+        )
+        self.vector_store.add(documents=chunks, embeddings=list(embeddings), metadatas=metadatas)
 
-            if not chunks:
-                return
+    def _get_neighbors(self, doc: Document) -> List[Document]:
+        neighbors = []
+        next_id = doc.metadata.get("next_chunk_id")
+        prev_id = doc.metadata.get("prev_chunk_id")
+        section_id = doc.metadata.get("section_id")
 
-            embeddings = self.embedding_model.encode(
-                chunks,
-                batch_size=64,
-                show_progress_bar=True,
-                convert_to_numpy=True
-            )
+        ids_to_fetch = [i for i in [next_id, prev_id] if i]
 
-            embeddings_list = [emb for emb in embeddings]
-            self.vector_store.add(documents=chunks, embeddings=embeddings_list, metadatas=metadatas)
+        if ids_to_fetch:
+            results = self.vector_store.collection.get(ids=ids_to_fetch)
+            if results and results.get("ids") and results.get("documents") and results.get("metadatas"):
+                docs = results["documents"]
+                metas = results["metadatas"]
+                if docs and metas:
+                    for i in range(len(results["ids"])):
+                        neighbors.append(Document(
+                            page_content=docs[i],
+                            metadata=metas[i] or {}
+                        ))
+
+        if section_id and section_id != "structure":
+             section_results = self.vector_store.collection.get(where={"section_id": section_id})
+             if section_results and section_results.get("ids") and section_results.get("documents") and section_results.get("metadatas"):
+                sec_ids = section_results["ids"]
+                sec_docs = section_results["documents"]
+                sec_metas = section_results["metadatas"]
+
+                if sec_ids and sec_docs and sec_metas:
+                    for i in range(len(sec_ids)):
+                        d_id = sec_ids[i]
+                        if d_id not in ids_to_fetch and d_id != doc.metadata.get("chunk_id"):
+                            neighbors.append(Document(
+                                page_content=sec_docs[i],
+                                metadata=sec_metas[i] or {}
+                            ))
+
+        return neighbors
 
     def query(self, question: str, k: int = 5) -> str | None:
-            hypothetical_answer = self.llm_service.generate_hypothetical_answer(question)
-            if not hypothetical_answer:
-                hypothetical_answer = question
-
+        try:
+            hypo_answer = self.llm_service.generate_hypothetical_answer(question) or question
             lc_store = self.vector_store.get_langchain_store(self.lc_embeddings)
 
-            retriever = GraphRetriever(
-                store=lc_store,
-                edges=self.edges,
-                strategy=Eager(k=k*2, start_k=k, max_depth=1)
-            )
+            initial_docs = lc_store.similarity_search(hypo_answer, k=k)
+            if not initial_docs:
+                return "No relevant context found."
 
-            try:
-                retrieved_docs = retriever.invoke(hypothetical_answer)
+            all_docs = []
+            seen_ids = set()
 
-                if not retrieved_docs:
-                    return "No relevant context found."
+            for d in initial_docs:
+                chunk_id = d.metadata.get("chunk_id")
+                if chunk_id and chunk_id not in seen_ids:
+                    all_docs.append(d)
+                    seen_ids.add(chunk_id)
 
-                doc_texts = [doc.page_content for doc in retrieved_docs]
-                scores = self.cross_encoder.predict([(question, text) for text in doc_texts])
+                for neighbor in self._get_neighbors(d):
+                    n_id = neighbor.metadata.get("chunk_id")
+                    if n_id and n_id not in seen_ids:
+                         all_docs.append(neighbor)
+                         seen_ids.add(n_id)
 
-                scored_docs = sorted(zip(scores, retrieved_docs), key=lambda x: x[0], reverse=True)
-                reranked_docs = [doc for score, doc in scored_docs[:k]]
+            if not all_docs:
+                return "No relevant context found."
 
-                formatted_contexts = []
-                seen_structures = set()
-                global_structure_context = ""
+            doc_texts = [d.page_content for d in all_docs]
+            scores = self.cross_encoder.predict([(question, t) for t in doc_texts])
+            scored_docs = sorted(zip(scores, all_docs), key=lambda x: x[0], reverse=True)
 
-                for doc in reranked_docs:
-                    filename = doc.metadata.get("filename", "Unknown Source")
+            reranked_docs = [d for s, d in scored_docs[:k*2]]
 
-                    structure = doc.metadata.get("document_structure")
+            formatted_contexts = []
+            seen_structures = set()
+            global_structure_context = ""
 
-                    if doc.metadata.get("is_structure") and not structure:
-                         structure = doc.page_content
+            for doc in reranked_docs:
+                filename = doc.metadata.get("filename", "Unknown")
+                structure = doc.metadata.get("document_structure")
 
-                    if structure and filename not in seen_structures:
-                        global_structure_context += f"Document Structure for {filename}:\n{structure}\n\n"
-                        seen_structures.add(filename)
+                if doc.metadata.get("is_structure") and not structure:
+                    structure = doc.page_content
 
-                    if doc.metadata.get("is_structure"):
-                        header = "[DOCUMENT STRUCTURE / TABLE OF CONTENTS]"
-                    else:
-                        idx = doc.metadata.get("chunk_index", "N/A")
-                        header = f"[Source: {filename}, Segment: {idx}]"
+                if structure and filename not in seen_structures:
+                    global_structure_context += f"Document Structure for {filename}:\n{structure}\n\n"
+                    seen_structures.add(filename)
 
-                    formatted_contexts.append(f"{header}\n{doc.page_content}")
+                header = "[STRUCTURE]" if doc.metadata.get("is_structure") else f"[Source: {filename}, Section: {doc.metadata.get('header', 'N/A')}]"
+                formatted_contexts.append(f"{header}\n{doc.page_content}")
 
-                if global_structure_context:
-                    formatted_contexts.insert(0, f"--- GLOBAL CONTEXT ---\n{global_structure_context}--- END GLOBAL CONTEXT ---")
+            if global_structure_context:
+                formatted_contexts.insert(0, f"--- GLOBAL CONTEXT ---\n{global_structure_context}--- END GLOBAL CONTEXT ---")
 
-                return self.llm_service.generate_answer(question, formatted_contexts)
+            return self.llm_service.generate_answer(question, formatted_contexts)
 
-            except Exception as e:
-                print(f"Retrieval or generation failed: {e}")
-                return "Error during retrieval or answer generation."
+        except Exception as e:
+            print(f"RAG Error: {e}")
+            return "Error during retrieval or answer generation."
 
     def delete_document(self, filename: str) -> None:
         self.vector_store.delete(filename=filename)

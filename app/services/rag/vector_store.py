@@ -20,9 +20,9 @@ class VectorStore:
 
     def get_langchain_store(self, embedding_function: Any) -> Chroma:
         return Chroma(
+            client=self.client,
             collection_name=self.collection_name,
             embedding_function=embedding_function,
-            persist_directory=self.path
         )
 
     def add(self, documents: Sequence[str], embeddings: Sequence[Embedding], metadatas: Sequence[Metadata]) -> None:
