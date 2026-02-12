@@ -33,4 +33,10 @@ class PDFService:
             return True
         return False
 
+    def clear_files(self) -> None:
+        if self.upload_dir.exists():
+            for f in self.upload_dir.iterdir():
+                if f.is_file():
+                    os.remove(f)
+
 pdf_service = PDFService()

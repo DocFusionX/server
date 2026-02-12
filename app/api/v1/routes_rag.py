@@ -13,7 +13,7 @@ class IngestRequest(BaseModel):
 
 class QueryRequest(BaseModel):
     question: str
-    k: int = 3
+    k: int = 5
 
 @router.post("/ingest")
 async def ingest_document(request: IngestRequest):
@@ -24,22 +24,25 @@ async def ingest_document(request: IngestRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    filename = file.filename or "document.pdf"
+async def upload_file(file: UploadFile = File(...)):
+    filename = file.filename or "document"
+    content = await file.read()
 
-    if not filename.lower().endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    text_content = ""
+    if filename.lower().endswith(".pdf"):
+        text_content = pdf_service.process_upload(content, filename)
+    elif filename.lower().endswith(".txt"):
+        text_content = content.decode("utf-8")
+    else:
+        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
 
     try:
-        content = await file.read()
-        markdown_content = pdf_service.process_upload(content, filename)
-
-        rag_service.ingest_text(markdown_content, metadata={"filename": filename, "source": "upload"})
+        rag_service.ingest_text(text_content, metadata={"filename": filename, "source": "upload"})
 
         return {
             "message": "File processed and ingested successfully",
             "filename": filename,
-            "content_length": len(markdown_content)
+            "content_length": len(text_content)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -72,5 +75,14 @@ async def query_rag(request: QueryRequest):
     try:
         answer = rag_service.query(request.question, request.k)
         return {"answer": answer}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/clear")
+async def clear_database():
+    try:
+        rag_service.clear_database()
+        pdf_service.clear_files()
+        return {"message": "Database and files cleared successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

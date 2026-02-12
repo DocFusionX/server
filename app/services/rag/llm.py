@@ -1,7 +1,7 @@
 from typing import List
 from mistralai import Mistral, Messages, MessagesTypedDict
 from mistralai.models import UserMessage, SystemMessage
-from app.services.rag.prompts import INITIAL_PROMPT, REFINE_PROMPT_TEMPLATE
+from app.services.rag.prompts import MAP_PROMPT, REDUCE_PROMPT, HYDE_PROMPT, STUFF_PROMPT
 
 class LLMService:
     def __init__(self, client: Mistral, model: str, max_tokens: int):
@@ -19,17 +19,45 @@ class LLMService:
             return chat_response.choices[0].message.content
         return None
 
-    def get_initial_answer(self, question: str, context: str) -> str | None:
+    def generate_hypothetical_answer(self, question: str) -> str | None:
         messages = [
-            SystemMessage(content=INITIAL_PROMPT),
-            UserMessage(content=f"Context:\n{context}\n\nQuestion: {question}")
+            SystemMessage(content=HYDE_PROMPT),
+            UserMessage(content=question)
         ]
         return self._call_llm(messages)
 
-    def get_refined_answer(self, question: str, existing_answer: str, new_context: str) -> str | None:
-        refine_prompt = REFINE_PROMPT_TEMPLATE.format(question=question, existing_answer=existing_answer)
+    def generate_answer(self, question: str, contexts: List[str]) -> str | None:
+        combined_context = "\n\n---\n\n".join(contexts)
+        prompt = STUFF_PROMPT.format(question=question, context=combined_context)
+
         messages = [
-            SystemMessage(content=refine_prompt),
-            UserMessage(content=f"New Context:\n{new_context}")
+            SystemMessage(content="You are an expert Q&A system."),
+            UserMessage(content=prompt)
         ]
+        return self._call_llm(messages)
+
+    def generate_answer_map_reduce(self, question: str, contexts: List[str]) -> str | None:
+        individual_answers = []
+        for context in contexts:
+            map_prompt_formatted = MAP_PROMPT.format(question=question, context=context)
+            messages = [
+                SystemMessage(content="You are an expert Q&A system."),
+                UserMessage(content=map_prompt_formatted)
+            ]
+            answer = self._call_llm(messages)
+            if answer:
+                individual_answers.append(answer)
+
+        individual_answers = [ans for ans in individual_answers if ans.strip()]
+
+        if not individual_answers:
+            return "Could not generate any answers from the provided documents. Try a different query."
+
+        answers_str = "\n---\n".join(individual_answers)
+        reduce_prompt_formatted = REDUCE_PROMPT.format(question=question, answers=answers_str)
+        messages = [
+            SystemMessage(content="You are an expert Q&a system."),
+            UserMessage(content=reduce_prompt_formatted)
+        ]
+
         return self._call_llm(messages)
